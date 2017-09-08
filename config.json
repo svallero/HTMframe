@@ -1,0 +1,23 @@
+{
+  "name": "pippo",
+  "mesos_endpoint" : "193.205.66.173:5050",
+  "base_image": "gitlab.c3s.unito.it:5000/htadmin/createdockers:omkaar",
+  "__base_image": "nginx",
+  "network_name": "dummynet",
+  "mesos_dns": "192.168.0.81",
+  "shared_volume": "/home",
+  "shared_mount": "/archive/home",
+  "master": {
+      "cpus": 0.1,
+      "mem": 512
+  }, 
+  "submitter": {
+      "cpus": 0.1,
+      "mem": 512
+  }, 
+  "executor": {
+      "cpus": 0.1,
+      "mem": 512,
+      "num_instances": 3 
+  } 
+}

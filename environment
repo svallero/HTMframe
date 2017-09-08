@@ -1,0 +1,1 @@
+export MESOS_NATIVE_JAVA_LIBRARY="/home/admin/mesos-1.3.0/build/src/.libs/libmesos.so"

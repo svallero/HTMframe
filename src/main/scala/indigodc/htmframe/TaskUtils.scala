@@ -1,88 +1,16 @@
 package indigodc.htmframe
 
 import org.apache.mesos._
-import com.google.protobuf.ByteString
 import scala.collection.JavaConverters._
-import java.io.File
+import java.util.UUID
 
 trait TaskUtils {
 
-  //def rendlerHome(): File
-
-  //val TASK_CPUS = 1.0
-  //val TASK_MEM = 32.0
-
-  //protected[this] val rendlerUris: Seq[Protos.CommandInfo.URI] =
-  //  Seq(
-  //    "render.js",
-  //    "python/crawl_executor.py",
-  //    "python/export_dot.py",
-  //    "python/render_executor.py",
-  //    "python/results.py",
-  //    "python/task_state.py"
-  //  ).map {
-  //      fName =>
-  //        Protos.CommandInfo.URI.newBuilder
-  //          .setValue(new File(rendlerHome, fName).getAbsolutePath)
-  //          .setExtract(false)
-  //          .build
-  //    }
-
-  //lazy val crawlExecutor: Protos.ExecutorInfo = {
-  //  val command = Protos.CommandInfo.newBuilder
-  //    .setValue("python crawl_executor.py")
-  //    .addAllUris(rendlerUris.asJava)
-  //  Protos.ExecutorInfo.newBuilder
-  //    .setExecutorId(Protos.ExecutorID.newBuilder.setValue("crawl-executor"))
-  //    .setName("Crawler")
-  //    .setCommand(command)
-  //    .build
-  //}
-
-  //lazy val renderExecutor: Protos.ExecutorInfo = {
-  //  val command = Protos.CommandInfo.newBuilder
-  //    .setValue("python render_executor.py --local")
-  //    .addAllUris(rendlerUris.asJava)
-  //  Protos.ExecutorInfo.newBuilder
-  //    .setExecutorId(Protos.ExecutorID.newBuilder.setValue("render-executor"))
-  //    .setName("Renderer")
-  //    .setCommand(command)
-  //    .build
-  //}
-
-  def makeTaskPrototype(id: String, offer: Protos.Offer): Protos.TaskInfo = {
-    // CONTAINER SPECS
-    val imageName = "alpine"
-    val network = Protos.ContainerInfo.DockerInfo.Network.BRIDGE
-    val cpus = 1.0
-    val mem = 32.0
-
-    val dockerInfoBuilder: Protos.ContainerInfo.DockerInfo.Builder = 
-                             Protos.ContainerInfo.DockerInfo.newBuilder();
-    // image
-    dockerInfoBuilder.setImage(imageName); 
-    // network
-    dockerInfoBuilder.setNetwork(network);
-    // container
-    val containerInfoBuilder: Protos.ContainerInfo.Builder = Protos.ContainerInfo.newBuilder();
-    containerInfoBuilder.setType(Protos.ContainerInfo.Type.DOCKER);
-    containerInfoBuilder.setDocker(dockerInfoBuilder.build());
-
-    // CREATE TASK     
-    Protos.TaskInfo.newBuilder
-      .setTaskId(Protos.TaskID.newBuilder.setValue(id))
-      .setName("")
-      .setSlaveId((offer.getSlaveId))
-      .addAllResources(
-        Seq(
-          scalarResource("cpus", cpus),
-          scalarResource("mem", mem)
-        ).asJava
-       )
-      .setContainer(containerInfoBuilder)
-      .setCommand(Protos.CommandInfo.newBuilder().setShell(false))
+  protected def dockerParameter(key: String, value: String): Protos.Parameter =
+    Protos.Parameter.newBuilder
+      .setKey(key)
+      .setValue(value)
       .build
-  }
 
   protected def scalarResource(name: String, value: Double): Protos.Resource =
     Protos.Resource.newBuilder
@@ -91,57 +19,117 @@ trait TaskUtils {
       .setScalar(Protos.Value.Scalar.newBuilder.setValue(value))
       .build
 
-  def makeSimpleTask(
-    id: String,
-    offer: Protos.Offer): Protos.TaskInfo =
-    makeTaskPrototype(id, offer).toBuilder
-      .setName(s"simple_$id")
-      //.setData(ByteString.copyFromUtf8(url))
+  def makeMasterTask(offer: Protos.Offer): Protos.TaskInfo = {
+    //val id = "mastertask"
+    val role = "master" 
+    // generate UUID
+    val uuid: UUID = UUID.randomUUID();
+    val id = FarmDescriptor.frameworkName + "_" + role + "_" + uuid; 
+
+    // create the containerInfoBuilder for role
+    val containerInfoBuilder: Protos.ContainerInfo.Builder = makeContainerBuilder(role); 
+ 
+
+    // create commandBuilder
+    // here we store the arguments to the container's entrypoint
+    val commandInfoBuilder: Protos.CommandInfo.Builder = makeMasterCommandBuilder; 
+
+    val discoveryInfoBuilder: Protos.DiscoveryInfo.Builder = makeDiscoveryBuilder(role);
+    
+    val healthCheckBuilder: Protos.HealthCheck.Builder = makeHealthCheckBuilder(role);
+
+    // CREATE TASK     
+    Protos.TaskInfo.newBuilder
+      .setTaskId(Protos.TaskID.newBuilder.setValue(id))
+      .setName(id)
+      .setSlaveId((offer.getSlaveId))
+      .addAllResources(
+        Seq(
+          scalarResource("cpus", FarmDescriptor.masterCpus),
+          scalarResource("mem", FarmDescriptor.masterMem)
+        ).asJava
+       )
+      .setContainer(containerInfoBuilder)
+      .setCommand(commandInfoBuilder)
+      .setDiscovery(discoveryInfoBuilder)
+      .setHealthCheck(healthCheckBuilder)
       .build
 
-  //def makeRenderTask(
-  //  id: String,
-  //  url: String,
-  //  offer: Protos.Offer): Protos.TaskInfo =
-  //  makeTaskPrototype(id, offer).toBuilder
-  //   .setName(s"render_$id")
-  //    .setExecutor(renderExecutor)
-  //    .setData(ByteString.copyFromUtf8(url))
-  //    .build
+  }
 
-  //def maxTasksForOffer(
-  //  offer: Protos.Offer,
-   // cpusPerTask: Double = TASK_CPUS,
-    //memPerTask: Double = TASK_MEM): Int = {
-  //  var count = 0
-  //  var cpus = 0.0
-  //  var mem = 0.0
+  protected def makeHealthCheckBuilder(role: String): Protos.HealthCheck.Builder = { 
+    // TODO: put domain in config file 
+    val domain = "mesos"
+    val commandBuilder: Protos.CommandInfo.Builder = Protos.CommandInfo.newBuilder()
+       .setValue(
+         s"curl -f -X GET http://${role}.${FarmDescriptor.frameworkName}.${domain}:5000/health"
+       ) 
 
-  //  for (resource <- offer.getResourcesList.asScala) {
-  //    resource.getName match {
-  //      case "cpus" => cpus = resource.getScalar.getValue
-  //      case "mem"  => mem = resource.getScalar.getValue
-  //      case _      => ()
-  //    }
-  //  }
+    Protos.HealthCheck.newBuilder()
+          .setCommand(commandBuilder)
+          .setGracePeriodSeconds(300)
+          .setIntervalSeconds(30)
+          .setConsecutiveFailures(3)
+  }
 
-  //  while (cpus >= TASK_CPUS && mem >= TASK_MEM) {
-  //    count = count + 1
-  //    cpus = cpus - TASK_CPUS
-  //    mem = mem - TASK_MEM
-  //  }
+  protected def makeDiscoveryBuilder(name: String): Protos.DiscoveryInfo.Builder = { 
 
-  //  count
-  //}
+    Protos.DiscoveryInfo.newBuilder()
+          .setName(name)
+          .setVisibility(Protos.DiscoveryInfo.Visibility.EXTERNAL)
+  }
 
-  //def isTerminal(state: Protos.TaskState): Boolean = {
-  //  import Protos.TaskState._
-  //  state match {
-  //    case TASK_FINISHED | TASK_FAILED | TASK_KILLED | TASK_LOST =>
-  //      true
-  //    case _ =>
-  //      false
-  //  }
- // }
+  protected def makeMasterCommandBuilder: Protos.CommandInfo.Builder = { 
 
+    Protos.CommandInfo.newBuilder()
+          .setShell(false) 
+          .addAllArguments(
+              Seq(
+                 "-m",
+                 "-r",
+                 "https://gitlab.c3s.unito.it/htadmin/AdminKey/raw/master/occam_htadmin.pub",
+                 "-S",
+                 "pinzillacchero" 
+              ).asJava
+          )
+  }
+ 
+  protected def makeContainerBuilder(role: String): Protos.ContainerInfo.Builder = { 
+
+    // TODO: we could use the parameter "role" here, 
+    // for instance to set the container hostname
+
+    // DOCKER INFO BUILDER 
+    val dockerInfoBuilder: Protos.ContainerInfo.DockerInfo.Builder = 
+                             Protos.ContainerInfo.DockerInfo.newBuilder();
+    // image
+    dockerInfoBuilder.setImage(FarmDescriptor.baseImage); 
+    // network
+    // for the time being we support only USER networks
+    val net = Protos.ContainerInfo.DockerInfo.Network.USER;
+    dockerInfoBuilder.setNetwork(net);
+    //dockerInfoBuilder.setForcePullImage(true);
+    // dns
+    // TODO: domain should be taken from config
+    val domain = "mesos"
+    dockerInfoBuilder.addAllParameters(
+       Seq(
+          dockerParameter("dns", FarmDescriptor.mesosDNS), 
+          // hostname should be the same as DNS name, or healthchecks won't work! 
+          dockerParameter("hostname", s"${role}.${FarmDescriptor.frameworkName}.${domain}")
+       ).asJava
+    );
+
+    // NETWORK INFO BUILDER
+    // this is needed if you use docker USER network
+    val networkInfoBuilder: Protos.NetworkInfo.Builder = 
+                   Protos.NetworkInfo.newBuilder.setName(FarmDescriptor.networkName) 
+
+    // 
+    val containerInfoBuilder: Protos.ContainerInfo.Builder = 
+                                                  Protos.ContainerInfo.newBuilder();
+    containerInfoBuilder.setType(Protos.ContainerInfo.Type.DOCKER);
+    containerInfoBuilder.setDocker(dockerInfoBuilder.build());
+    containerInfoBuilder.addNetworkInfos(networkInfoBuilder);
+  }
 }
