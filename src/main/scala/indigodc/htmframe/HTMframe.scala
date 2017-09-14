@@ -47,6 +47,8 @@ object HTMframe {
       |baseImage:          [${FarmDescriptor.baseImage}]
       |networkName:        [${FarmDescriptor.networkName}]
       |mesosDNS:           [${FarmDescriptor.mesosDNS}]
+      |sharedVolume:       [${FarmDescriptor.sharedVolume}]
+      |sharedMount:        [${FarmDescriptor.sharedMount}]
       |masterCpus:         [${FarmDescriptor.masterCpus}]
       |masterMem:          [${FarmDescriptor.masterMem}]
       |submitterCpus:      [${FarmDescriptor.submitterCpus}]

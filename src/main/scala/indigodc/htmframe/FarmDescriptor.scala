@@ -25,6 +25,7 @@ object FarmDescriptor {
     var executorInstances: Int = 3
     var sharedVolume:   String = "/home/"
     var sharedMount:    String = "/home/"
+    var condorConfig:    String = "condor_config"
 
     // READ THE CONFIG FILE
     def loadConfig(configFile: String) = {
@@ -71,6 +72,9 @@ object FarmDescriptor {
       catch { case _: Throwable => }
 
       try { sharedMount = ((json \ "shared_mount").get).as[String] }
+      catch { case _: Throwable => }
+
+      try { condorConfig = ((json \ "condor_config").get).as[String] }
       catch { case _: Throwable => }
     }
 }

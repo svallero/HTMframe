@@ -1,12 +1,13 @@
 {
   "name": "pippo",
   "mesos_endpoint" : "193.205.66.173:5050",
-  "base_image": "gitlab.c3s.unito.it:5000/htadmin/createdockers:omkaar",
+  "base_image": "gitlab.c3s.unito.it:5000/htadmin/createdockers:omkaar_htmf",
   "__base_image": "nginx",
   "network_name": "dummynet",
   "mesos_dns": "192.168.0.81",
   "shared_volume": "/home",
   "shared_mount": "/archive/home",
+  "condor_config": "/home/admin/condor_config/condor_limit_slots",
   "master": {
       "cpus": 0.1,
       "mem": 512

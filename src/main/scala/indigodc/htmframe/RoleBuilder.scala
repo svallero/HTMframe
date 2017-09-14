@@ -3,6 +3,7 @@ package indigodc.htmframe
 import org.apache.mesos._
 import scala.collection.JavaConverters._
 import java.util.UUID
+import scala.annotation.switch
 
 abstract class RoleBuilder(offer: Protos.Offer) {
 
@@ -17,6 +18,7 @@ abstract class RoleBuilder(offer: Protos.Offer) {
    lazy val discoveryInfoBuilder: Protos.DiscoveryInfo.Builder = 
                                            RoleBuilder.makeDiscoveryBuilder(role);
    lazy val healthCheckBuilder: Protos.HealthCheck.Builder = 
+                                           // RoleBuilder.makeHealthCheckHttpBuilder(role);
                                            RoleBuilder.makeHealthCheckBuilder(role);
    lazy val commandInfoBuilder: Protos.CommandInfo.Builder = 
                                            RoleBuilder.makeCommandBuilder(command); 
@@ -64,13 +66,17 @@ object RoleBuilder {
     // dns
     // TODO: domain should be taken from config
     val domain = "mesos"
-    dockerInfoBuilder.addAllParameters(
-       Seq(
-          dockerParameter("dns", FarmDescriptor.mesosDNS), 
-          // hostname should be the same as DNS name, or healthchecks won't work! 
-          dockerParameter("hostname", s"${role}.${FarmDescriptor.frameworkName}.${domain}")
-       ).asJava
-    );
+
+    // dockerInfoBuilder.addAllParameters(
+    //    Seq(
+    //       dockerParameter("dns", FarmDescriptor.mesosDNS), 
+    //      // hostname should be the same as DNS name, or healthchecks won't work! 
+    //      dockerParameter("hostname", s"${role}.${FarmDescriptor.frameworkName}.${domain}")
+    //   ).asJava
+    // );
+    dockerInfoBuilder.addParameters(dockerParameter("dns", FarmDescriptor.mesosDNS)); 
+    // hostname should be the same as DNS name, or healthchecks won't work! 
+    if (role != "executor") dockerInfoBuilder.addParameters(dockerParameter("hostname", s"${role}.${FarmDescriptor.frameworkName}.${domain}"));
 
     // NETWORK INFO BUILDER
     // this is needed if you use docker USER network
@@ -82,7 +88,10 @@ object RoleBuilder {
     volumeBuilder.setMode(Protos.Volume.Mode.RW );
     volumeBuilder.setHostPath(FarmDescriptor.sharedVolume);
     volumeBuilder.setContainerPath(FarmDescriptor.sharedMount);
-    
+    val volumeCondorConfigBuilder: Protos.Volume.Builder = Protos.Volume.newBuilder(); 
+    volumeCondorConfigBuilder.setMode(Protos.Volume.Mode.RW );
+    volumeCondorConfigBuilder.setHostPath(FarmDescriptor.condorConfig);
+    volumeCondorConfigBuilder.setContainerPath("/etc/condor/config.d/condor_custom_config");
     
 
     // CONTAINER INFO BUILDER 
@@ -91,6 +100,7 @@ object RoleBuilder {
     containerInfoBuilder.setType(Protos.ContainerInfo.Type.DOCKER);
     containerInfoBuilder.setDocker(dockerInfoBuilder.build());
     containerInfoBuilder.addNetworkInfos(networkInfoBuilder);
+    containerInfoBuilder.addVolumes(volumeCondorConfigBuilder);
     if (role != "master") containerInfoBuilder.addVolumes(volumeBuilder);
     containerInfoBuilder // expected return value
   }
@@ -122,9 +132,26 @@ object RoleBuilder {
          s"curl -f -X GET http://${role}.${FarmDescriptor.frameworkName}.${domain}:5000/health"
        ) 
 
+    // parameters should be in config
     Protos.HealthCheck.newBuilder()
           .setCommand(commandBuilder)
-          .setGracePeriodSeconds(300)
+          .setGracePeriodSeconds(100)
+          .setIntervalSeconds(30)
+          .setConsecutiveFailures(3)
+  }
+
+  def makeHealthCheckHttpBuilder(role: String): Protos.HealthCheck.Builder = { 
+    // looks like it does not work... 
+    val httpBuilder: Protos.HealthCheck.HTTPCheckInfo.Builder = 
+           Protos.HealthCheck.HTTPCheckInfo.newBuilder()
+                    .setPort(5000)
+                    .setPath("/health")
+                    .setScheme("http")
+    
+    Protos.HealthCheck.newBuilder()
+          .setType(Protos.HealthCheck.Type.HTTP)
+          .setHttp(httpBuilder) 
+          .setGracePeriodSeconds(100)
           .setIntervalSeconds(30)
           .setConsecutiveFailures(3)
   }
@@ -135,5 +162,5 @@ object RoleBuilder {
           .setShell(false) 
           .addAllArguments(command.asJava)
   }
- 
+  
 }

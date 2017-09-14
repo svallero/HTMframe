@@ -10,17 +10,22 @@ import scala.concurrent.{ Await, Future }
 
 import scala.concurrent.duration.Duration
 import scala.util.Try
+import scala.io.Source
 
-class Scheduler() extends mesos.Scheduler {
+class Scheduler() extends mesos.Scheduler with TaskUtils {
 
   // master role
   private[this] val masterRunning = mutable.Set[Protos.TaskID]();
   private[this] val masterPending = mutable.Set[Protos.TaskID]();
+  private[this] var masterHealthy = false;
   // submitter role
   private[this] val submitterRunning = mutable.Set[Protos.TaskID]();
   private[this] val submitterPending = mutable.Set[Protos.TaskID]();
-  // executor role
-  // TODO 
+  private[this] var submitterHealthy = false;
+  // executor role 
+  private[this] val executorsRunning = mutable.Set[Protos.TaskID]();
+  private[this] val executorsPending = mutable.Set[Protos.TaskID]();
+  private[this] var executorsWait = 0;   
   
   // general
   private[this] val pendingInstances = mutable.Set[Protos.TaskID]();
@@ -29,7 +34,8 @@ class Scheduler() extends mesos.Scheduler {
   private[this] var tasksCreated = 0
   private[this] var tasksRunning = 0
   private[this] var shuttingDown: Boolean = false
-
+ 
+   
   def waitForRunningTasks(): Unit = {
     while (tasksRunning > 0) {
       println(s"Shutting down but still have $tasksRunning tasks running.")
@@ -116,14 +122,43 @@ class Scheduler() extends mesos.Scheduler {
               masterPending.add(masterTask.getTaskId);
           } else if ( submitterRunning.isEmpty &&  submitterPending.isEmpty ) {
           // launch submitter
-              val submitterRole: SubmitterBuilder = new SubmitterBuilder(offer);
-              val submitterTask: Protos.TaskInfo = submitterRole.taskInfo;
-              tasks += submitterTask
-              println(s"Creating task ${submitterTask}" )        
-              tasksCreated = tasksCreated + 1
-              submitterPending.add(submitterTask.getTaskId);
+          // only if master healthy
+              if (masterHealthy) { 
+                  // println(s"MASTER IS OK!" )        
+                  val submitterRole: SubmitterBuilder = new SubmitterBuilder(offer);
+                  val submitterTask: Protos.TaskInfo = submitterRole.taskInfo;
+                  tasks += submitterTask
+                  println(s"Creating task ${submitterTask}" )        
+                  tasksCreated = tasksCreated + 1
+                  submitterPending.add(submitterTask.getTaskId);
+              } 
           } else {
               // in this case we deal with executors according to condor queue
+              // check if submitter is healthy
+              //  println(s"SUBMITTER_STATUS: ${submitterHealthy}" )        
+              if (submitterHealthy) {
+                  // how many jobs in queue
+                  val queued_jobs: Int = getQueueSize
+                  println(s"Queued jobs: ${queued_jobs}" ) 
+                  // TODO: logica banale, va messa furba...
+                  // if ( queued_jobs > executorsPending.size + executorsRunning.size ) {
+                  // TODO: should not hardcode number of cycles
+                  executorsWait +=1
+                  if ( queued_jobs > 0 && executorsWait > 10) {
+                      executorsWait = 0 
+                      var new_instances = queued_jobs - executorsPending.size
+                      // TODO: should not hardcode max number of instances 
+                      if (new_instances > 10) new_instances = 10
+                      for( a <- 1 to new_instances ) {
+                          val executorRole: ExecutorBuilder = new ExecutorBuilder(offer);
+                          val executorTask: Protos.TaskInfo = executorRole.taskInfo;
+                          tasks += executorTask
+                          println(s"Creating task ${executorTask}" )        
+                          tasksCreated = tasksCreated + 1
+                          executorsPending.add(executorTask.getTaskId);
+                      }
+                  }
+              }
           }
 
         if (tasks.nonEmpty) {
@@ -145,22 +180,34 @@ class Scheduler() extends mesos.Scheduler {
     taskStatus: Protos.TaskStatus): Unit = {
     val taskId = taskStatus.getTaskId
     val state = taskStatus.getState
+    val health = taskStatus.getHealthy
     println(s"Task [${taskId.getValue}] is in state [$state]")
+    println(s"Task [${taskId.getValue}] is in health [$health]")
     if (state == Protos.TaskState.TASK_RUNNING){
         if (taskId.toString contains "master") {
             masterPending.remove(taskId);                           
             masterRunning.add(taskId);
+            masterHealthy = health
         } else if (taskId.toString contains "submitter") {
             submitterPending.remove(taskId);                           
             submitterRunning.add(taskId);
+            submitterHealthy = health
+        } else if (taskId.toString contains "executor") {
+            executorsPending.remove(taskId);                           
+            executorsRunning.add(taskId);
         }
     } else if (state == Protos.TaskState.TASK_FINISHED) {
         if (taskId.toString contains "master") {
             masterPending.remove(taskId);                           
             masterRunning.remove(taskId); 
+            masterHealthy = false
         } else if (taskId.toString contains "submitter") {
             submitterPending.remove(taskId);                           
             submitterRunning.remove(taskId);
+            submitterHealthy = false
+        } else if (taskId.toString contains "executor") {
+            executorsPending.remove(taskId);                           
+            executorsRunning.remove(taskId);
         }
     }
   }

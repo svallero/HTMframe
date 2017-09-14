@@ -34,3 +34,20 @@ class SubmitterBuilder(offer: Protos.Offer) extends RoleBuilder(offer) {
    val cpus: Double = FarmDescriptor.submitterCpus;
    val mem: Int = FarmDescriptor.submitterMem;
 }
+
+class ExecutorBuilder(offer: Protos.Offer) extends RoleBuilder(offer) {
+
+   // abstract methods implementation
+   val role: String = "executor";
+   val command: Seq[String] = 
+       Seq( "-e",
+            "master."+FarmDescriptor.frameworkName+".mesos",
+            "-r",
+            "https://gitlab.c3s.unito.it/htadmin/AdminKey/raw/master/occam_htadmin.pub",
+            "-S",
+            "pinzillacchero" 
+       )
+   ;
+   val cpus: Double = FarmDescriptor.executorCpus;
+   val mem: Int = FarmDescriptor.executorMem;
+}
