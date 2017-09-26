@@ -5,33 +5,49 @@ import mesos._
 
 import java.io._
 import play.api.libs.json._
+import scala.collection.mutable._
 
 object FarmDescriptor { 
 
     // THIS IS A SINGLETON
 
     // default values
-    var frameworkName:  String = "DummyFramework" 
-    var mesosMaster:    String = "localhost:5050"
-    var baseImage:      String = "nginx" 
-    var networkName:    String = "caliconet" 
-    var mesosDNS:       String = "localhost" 
-    var masterCpus:     Double = 0.1 
-    var masterMem:         Int = 512 
-    var submitterCpus:  Double = 0.1 
-    var submitterMem:      Int = 512 
-    var executorCpus:   Double = 0.1 
-    var executorMem:       Int = 512 
-    var executorInstances: Int = 3
-    var sharedVolume:   String = "/home/"
-    var sharedMount:    String = "/home/"
+    var frameworkName:   String = "DummyFramework" 
+    var mesosMaster:     String = "localhost:5050"
+    var baseImage:       String = "nginx" 
+    var waitCycles:         Int = 10 
+    var executorsBatch:     Int = 10
+    var networkName:     String = "caliconet" 
+    var mesosDNS:        String = "localhost" 
+    var dnsDomain:       String = "mesos" 
+    var sharedVolume:    String = "/home/"
+    var sharedMount:     String = "/home/"
     var condorConfig:    String = "condor_config"
+    val roleCpus:   Map[String, Double] = 
+                    Map[String, Double](
+                                  "master"    -> 0.1,
+                                  "submitter" -> 0.1,
+                                  "executor"  -> 0.1 
+                                  )     
+    val roleMem:    Map[String, Int] = 
+                    Map[String, Int](
+                                  "master"    -> 512,
+                                  "submitter" -> 512,
+                                  "executor"  -> 512 
+                                  )     
+    val roleConfig: Map[String, String] = 
+                    Map[String, String](
+                                  "master"    -> "",
+                                  "submitter" -> "",
+                                  "executor"  -> "" 
+                                  )     
 
     // READ THE CONFIG FILE
     def loadConfig(configFile: String) = {
       val stream = new FileInputStream(configFile)
       val json: JsValue =  try { Json.parse(stream) } finally { stream.close() }
       // values
+      // GENERAL
       try { frameworkName = ((json \ "name").get).as[String] } 
       catch { case _: Throwable => }
 
@@ -41,40 +57,63 @@ object FarmDescriptor {
       try { baseImage = ((json \ "base_image").get).as[String] }
       catch { case _: Throwable => }
 
+      // ELASTICITY
+      try { waitCycles = ((json \ "wait_cycles").get).as[Int] }
+      catch { case _: Throwable => }
+
+      try { executorsBatch = ((json \ "executors_batch").get).as[Int] }
+      catch { case _: Throwable => }
+
+      // NETWORK
       try { networkName = ((json \ "network_name").get).as[String] }
       catch { case _: Throwable => }
 
       try { mesosDNS = ((json \ "mesos_dns").get).as[String] }
       catch { case _: Throwable => }
-
-      try { masterCpus = ((json \ "master" \ "cpus").get).as[Double] }
+       
+      try { dnsDomain = ((json \ "dns_domain").get).as[String] }
       catch { case _: Throwable => }
 
-      try { masterMem = ((json \ "master" \ "mem").get).as[Int] }
-      catch { case _: Throwable => }
-  
-      try { submitterCpus = ((json \ "submitter" \ "cpus").get).as[Double] }
-      catch { case _: Throwable => }
-
-      try { submitterMem = ((json \ "submitter" \ "mem").get).as[Int] }
-      catch { case _: Throwable => }
-
-      try { executorCpus = ((json \ "executor" \ "cpus").get).as[Double] }
-      catch { case _: Throwable => }
-
-      try { executorMem = ((json \ "executor" \ "mem").get).as[Int] }
-      catch { case _: Throwable => }
-                               
-      try { executorInstances = ((json \ "executor" \ "num_instances").get).as[Int] }
-      catch { case _: Throwable => }
-
+      // SHARED VOLUME
       try { sharedVolume = ((json \ "shared_volume").get).as[String] }
       catch { case _: Throwable => }
 
       try { sharedMount = ((json \ "shared_mount").get).as[String] }
       catch { case _: Throwable => }
-
+ 
+      // CONDOR CONFIG
       try { condorConfig = ((json \ "condor_config").get).as[String] }
       catch { case _: Throwable => }
+
+      // MASTER
+      try { roleCpus += ("master" -> ((json \ "master" \ "cpus").get).as[Double]) }
+      catch { case _: Throwable => }
+
+      try { roleMem += ("master" -> ((json \ "master" \ "mem").get).as[Int]) }
+      catch { case _: Throwable => }
+
+      try { roleConfig += ("master" -> ((json \ "master" \ "config").get).as[String]) }
+      catch { case _: Throwable => }
+ 
+      // SUBMITTER  
+      try { roleCpus += ("submitter" -> ((json \ "submitter" \ "cpus").get).as[Double]) }
+      catch { case _: Throwable => }
+
+      try { roleMem += ("submitter" -> ((json \ "submitter" \ "mem").get).as[Int]) }
+      catch { case _: Throwable => }
+
+      try { roleConfig += ("submitter" -> ((json \ "submitter" \ "config").get).as[String]) }
+      catch { case _: Throwable => }
+
+      // EXECUTOR
+      try { roleCpus += ("executor" -> ((json \ "executor" \ "cpus").get).as[Double]) }
+      catch { case _: Throwable => }
+
+      try { roleMem += ("executor" -> ((json \ "executor" \ "mem").get).as[Int]) }
+      catch { case _: Throwable => }
+
+      try { roleConfig += ("executor" -> ((json \ "executor" \ "config").get).as[String]) }
+      catch { case _: Throwable => }
+
     }
 }

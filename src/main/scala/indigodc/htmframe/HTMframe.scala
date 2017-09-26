@@ -2,6 +2,7 @@ package indigodc.htmframe
 
 
 import org.apache.mesos._
+import com.typesafe.scalalogging._
 
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -38,24 +39,32 @@ object HTMframe {
     // singleton
     FarmDescriptor.loadConfig(configFile)
 
-    println(s"""
+    val logger = Logger("HTMframe")
+    // println(s"""
+    logger.info(s"""
       |HTMframe
       |=======
       |
       |frameworkName:      [${FarmDescriptor.frameworkName}]
       |mesosMaster:        [${FarmDescriptor.mesosMaster}]
       |baseImage:          [${FarmDescriptor.baseImage}]
+      |waitCycles:         [${FarmDescriptor.waitCycles}]
+      |executorsBatch:     [${FarmDescriptor.executorsBatch}]
       |networkName:        [${FarmDescriptor.networkName}]
       |mesosDNS:           [${FarmDescriptor.mesosDNS}]
+      |dnsDomain:          [${FarmDescriptor.dnsDomain}]
       |sharedVolume:       [${FarmDescriptor.sharedVolume}]
       |sharedMount:        [${FarmDescriptor.sharedMount}]
-      |masterCpus:         [${FarmDescriptor.masterCpus}]
-      |masterMem:          [${FarmDescriptor.masterMem}]
-      |submitterCpus:      [${FarmDescriptor.submitterCpus}]
-      |submitterMem:       [${FarmDescriptor.submitterMem}]
-      |executorCpus:       [${FarmDescriptor.executorCpus}]
-      |executorMem:        [${FarmDescriptor.executorMem}]
-      |executorInstances:  [${FarmDescriptor.executorInstances}]
+      |condorConfig:       [${FarmDescriptor.condorConfig}]
+      |masterCpus:         [${FarmDescriptor.roleCpus("master")}]
+      |masterMem:          [${FarmDescriptor.roleMem("master")}]
+      |masterConfig:       [${FarmDescriptor.roleConfig("master")}]
+      |submitterCpus:      [${FarmDescriptor.roleCpus("submitter")}]
+      |submitterMem:       [${FarmDescriptor.roleMem("submitter")}]
+      |submitterConfig:    [${FarmDescriptor.roleConfig("submitter")}]
+      |executorCpus:       [${FarmDescriptor.roleCpus("executor")}]
+      |executorMem:        [${FarmDescriptor.roleMem("executor")}]
+      |executorConfig:     [${FarmDescriptor.roleConfig("executor")}]
       |
     """.stripMargin)
 

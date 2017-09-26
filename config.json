@@ -1,24 +1,33 @@
 {
   "name": "pippo",
   "mesos_endpoint" : "193.205.66.173:5050",
-  "base_image": "gitlab.c3s.unito.it:5000/htadmin/createdockers:omkaar_htmf",
-  "__base_image": "nginx",
+  "base_image": "svallero/htmframe:latest",
+  "wait_cycles": 15, 
+  "executors_batch": 10, 
   "network_name": "dummynet",
   "mesos_dns": "192.168.0.81",
-  "shared_volume": "/home",
-  "shared_mount": "/archive/home",
+  "dns_domain": "mesos",
+  "shared_volume": "/home/admin/test_homes",
+  "shared_mount": "/home",
   "condor_config": "/home/admin/condor_config/condor_limit_slots",
   "master": {
       "cpus": 0.1,
-      "mem": 512
+      "mem": 512,
+      "config": "/home/admin/HTMframe/config_master.json",
+      "health_checks": {
+          "grace_period_seconds": 100,
+          "interval_seconds": 30,
+          "consecutive_failures": 30
+      }
   }, 
   "submitter": {
       "cpus": 0.1,
-      "mem": 512
+      "mem": 512,
+      "config": "/home/admin/HTMframe/config_submitter.json"
   }, 
   "executor": {
       "cpus": 0.1,
       "mem": 512,
-      "num_instances": 3 
+      "config": "/home/admin/HTMframe/config_executor.json"
   } 
 }

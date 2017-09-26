@@ -5,7 +5,7 @@ import scala.collection.JavaConverters._
 import java.util.UUID
 import scala.annotation.switch
 
-abstract class RoleBuilder(offer: Protos.Offer) {
+class RoleBuilder(role: String, offer: Protos.Offer) {
 
    val uuid: UUID = UUID.randomUUID();
    lazy val id = FarmDescriptor.frameworkName + "_" + role + "_" + uuid;
@@ -31,8 +31,8 @@ abstract class RoleBuilder(offer: Protos.Offer) {
         .setSlaveId((offer.getSlaveId))
         .addAllResources(
           Seq(
-            RoleBuilder.scalarResource("cpus", cpus),
-            RoleBuilder.scalarResource("mem", mem)
+            RoleBuilder.scalarResource("cpus", FarmDescriptor.roleCpus(role)),
+            RoleBuilder.scalarResource("mem", FarmDescriptor.roleMem(role))
           ).asJava
         )
         .setContainer(containerInfoBuilder)
@@ -42,11 +42,9 @@ abstract class RoleBuilder(offer: Protos.Offer) {
         .build
 
 
-   // abstract methods to be implemented for each role
-   def role: String;
-   def command: Seq[String];
-   def cpus: Double;
-   def mem: Int;
+   // argument to entrypoint
+   val command: Seq[String] = 
+         Seq( "/root/config.json");
 }
 
 object RoleBuilder {
@@ -64,8 +62,6 @@ object RoleBuilder {
     dockerInfoBuilder.setNetwork(net);
     //dockerInfoBuilder.setForcePullImage(true);
     // dns
-    // TODO: domain should be taken from config
-    val domain = "mesos"
 
     // dockerInfoBuilder.addAllParameters(
     //    Seq(
@@ -76,7 +72,7 @@ object RoleBuilder {
     // );
     dockerInfoBuilder.addParameters(dockerParameter("dns", FarmDescriptor.mesosDNS)); 
     // hostname should be the same as DNS name, or healthchecks won't work! 
-    if (role != "executor") dockerInfoBuilder.addParameters(dockerParameter("hostname", s"${role}.${FarmDescriptor.frameworkName}.${domain}"));
+    if (role != "executor") dockerInfoBuilder.addParameters(dockerParameter("hostname", s"${role}.${FarmDescriptor.frameworkName}.${FarmDescriptor.dnsDomain}"));
 
     // NETWORK INFO BUILDER
     // this is needed if you use docker USER network
@@ -88,11 +84,17 @@ object RoleBuilder {
     volumeBuilder.setMode(Protos.Volume.Mode.RW );
     volumeBuilder.setHostPath(FarmDescriptor.sharedVolume);
     volumeBuilder.setContainerPath(FarmDescriptor.sharedMount);
+
     val volumeCondorConfigBuilder: Protos.Volume.Builder = Protos.Volume.newBuilder(); 
     volumeCondorConfigBuilder.setMode(Protos.Volume.Mode.RW );
     volumeCondorConfigBuilder.setHostPath(FarmDescriptor.condorConfig);
     volumeCondorConfigBuilder.setContainerPath("/etc/condor/config.d/condor_custom_config");
     
+    val volumeRoleConfigBuilder: Protos.Volume.Builder = Protos.Volume.newBuilder(); 
+    volumeRoleConfigBuilder.setMode(Protos.Volume.Mode.RO );
+    volumeRoleConfigBuilder.setHostPath(FarmDescriptor.roleConfig(role));
+
+    volumeRoleConfigBuilder.setContainerPath("/root/config.json");
 
     // CONTAINER INFO BUILDER 
     val containerInfoBuilder: Protos.ContainerInfo.Builder = 
@@ -101,6 +103,7 @@ object RoleBuilder {
     containerInfoBuilder.setDocker(dockerInfoBuilder.build());
     containerInfoBuilder.addNetworkInfos(networkInfoBuilder);
     containerInfoBuilder.addVolumes(volumeCondorConfigBuilder);
+    containerInfoBuilder.addVolumes(volumeRoleConfigBuilder);
     if (role != "master") containerInfoBuilder.addVolumes(volumeBuilder);
     containerInfoBuilder // expected return value
   }
@@ -125,16 +128,22 @@ object RoleBuilder {
 
    
   def makeHealthCheckBuilder(role: String): Protos.HealthCheck.Builder = { 
-    // TODO: put domain in config file 
-    val domain = "mesos"
     val commandBuilder: Protos.CommandInfo.Builder = Protos.CommandInfo.newBuilder()
        .setValue(
-         s"curl -f -X GET http://${role}.${FarmDescriptor.frameworkName}.${domain}:5000/health"
+         s"curl -f -X GET http://${role}.${FarmDescriptor.frameworkName}.${FarmDescriptor.dnsDomain}:5000/health"
        ) 
-
+   
+    // val gracePeriod = role match{
+    //    case "master" => FarmDescriptor.masterGracePeriod
+    //    case "submitter" => FarmDescriptor.submitterGracePeriod
+    //    case "executor" => FarmDescriptor.executorGracePeriod
+    //    case _ => -1
+    //} 
+            
     // parameters should be in config
     Protos.HealthCheck.newBuilder()
           .setCommand(commandBuilder)
+          // .setGracePeriodSeconds(gracePeriod)
           .setGracePeriodSeconds(100)
           .setIntervalSeconds(30)
           .setConsecutiveFailures(3)
