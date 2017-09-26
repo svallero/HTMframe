@@ -144,9 +144,9 @@ object RoleBuilder {
     Protos.HealthCheck.newBuilder()
           .setCommand(commandBuilder)
           // .setGracePeriodSeconds(gracePeriod)
-          .setGracePeriodSeconds(100)
-          .setIntervalSeconds(30)
-          .setConsecutiveFailures(3)
+          .setGracePeriodSeconds(FarmDescriptor.healthGracePeriodSeconds(role))
+          .setIntervalSeconds(FarmDescriptor.healthIntervalSeconds(role))
+          .setConsecutiveFailures(FarmDescriptor.healthConsecutiveFailures(role))
   }
 
   def makeHealthCheckHttpBuilder(role: String): Protos.HealthCheck.Builder = { 

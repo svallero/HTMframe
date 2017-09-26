@@ -41,6 +41,24 @@ object FarmDescriptor {
                                   "submitter" -> "",
                                   "executor"  -> "" 
                                   )     
+    val healthGracePeriodSeconds: Map[String, Int] = 
+                    Map[String, Int](
+                                  "master"    -> 100,
+                                  "submitter" -> 100,
+                                  "executor"  -> 100 
+                                  )     
+    val healthIntervalSeconds: Map[String, Int] = 
+                    Map[String, Int](
+                                  "master"    -> 30,
+                                  "submitter" -> 30,
+                                  "executor"  -> 30 
+                                  )     
+    val healthConsecutiveFailures: Map[String, Int] = 
+                    Map[String, Int](
+                                  "master"    -> 30,
+                                  "submitter" -> 30,
+                                  "executor"  -> 30 
+                                  )     
 
     // READ THE CONFIG FILE
     def loadConfig(configFile: String) = {
@@ -85,35 +103,31 @@ object FarmDescriptor {
       try { condorConfig = ((json \ "condor_config").get).as[String] }
       catch { case _: Throwable => }
 
-      // MASTER
-      try { roleCpus += ("master" -> ((json \ "master" \ "cpus").get).as[Double]) }
-      catch { case _: Throwable => }
+      // ROLES
+      val roles = Vector("master", "submitter", "executor")
 
-      try { roleMem += ("master" -> ((json \ "master" \ "mem").get).as[Int]) }
-      catch { case _: Throwable => }
+      for (role <- roles) {
+          try { roleCpus += (role -> ((json \ role \ "cpus").get).as[Double]) }
+          catch { case _: Throwable => }
+      
+          try { roleMem += (role -> ((json \ role \ "mem").get).as[Int]) }
+          catch { case _: Throwable => }
 
-      try { roleConfig += ("master" -> ((json \ "master" \ "config").get).as[String]) }
-      catch { case _: Throwable => }
+          try { roleConfig += (role -> ((json \ role \ "config").get).as[String]) }
+          catch { case _: Throwable => }
+
+          try { healthGracePeriodSeconds += 
+            (role -> ((json \ role \ "health_checks" \ "grace_period_seconds").get).as[Int]) }
+          catch { case _: Throwable => }
+
+          try { healthIntervalSeconds += 
+            (role -> ((json \ role \ "health_checks" \ "interval_seconds").get).as[Int]) }
+          catch { case _: Throwable => }
+
+          try { healthConsecutiveFailures += 
+            (role -> ((json \ role \ "health_checks" \ "consecutive_failures").get).as[Int]) }
+          catch { case _: Throwable => }
+       } 
  
-      // SUBMITTER  
-      try { roleCpus += ("submitter" -> ((json \ "submitter" \ "cpus").get).as[Double]) }
-      catch { case _: Throwable => }
-
-      try { roleMem += ("submitter" -> ((json \ "submitter" \ "mem").get).as[Int]) }
-      catch { case _: Throwable => }
-
-      try { roleConfig += ("submitter" -> ((json \ "submitter" \ "config").get).as[String]) }
-      catch { case _: Throwable => }
-
-      // EXECUTOR
-      try { roleCpus += ("executor" -> ((json \ "executor" \ "cpus").get).as[Double]) }
-      catch { case _: Throwable => }
-
-      try { roleMem += ("executor" -> ((json \ "executor" \ "mem").get).as[Int]) }
-      catch { case _: Throwable => }
-
-      try { roleConfig += ("executor" -> ((json \ "executor" \ "config").get).as[String]) }
-      catch { case _: Throwable => }
-
     }
 }
