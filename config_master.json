@@ -1,0 +1,19 @@
+{
+  "role": "master",
+  "master_address": "",
+  "condor_config": {
+      "config_url": "",
+      "shared_secret": "condor_shared_secret_here"    
+  },
+  "users": [
+      {
+        "name": "sara",
+        "password": "pippo123",
+        "key": "https://gitlab.c3s.unito.it/htadmin/AdminKey/raw/master/occam_htadmin.pub"
+      }
+  ],
+  "root_public_key": "https://gitlab.c3s.unito.it/htadmin/AdminKey/raw/master/occam_htadmin.pub",
+  "ldap": {} ,
+  "htmframe": true
+}
+
