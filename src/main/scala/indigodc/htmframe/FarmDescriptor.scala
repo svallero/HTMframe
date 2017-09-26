@@ -41,6 +41,12 @@ object FarmDescriptor {
                                   "submitter" -> "",
                                   "executor"  -> "" 
                                   )     
+    val requestAttributes:   Map[String, List[JsValue]] = 
+                    Map[String, List[JsValue]](
+                                  "master"    -> List(),
+                                  "submitter" -> List(),
+                                  "executor"  -> List() 
+                                  )     
     val healthGracePeriodSeconds: Map[String, Int] = 
                     Map[String, Int](
                                   "master"    -> 100,
@@ -126,6 +132,10 @@ object FarmDescriptor {
 
           try { healthConsecutiveFailures += 
             (role -> ((json \ role \ "health_checks" \ "consecutive_failures").get).as[Int]) }
+          catch { case _: Throwable => }
+
+          try { requestAttributes += 
+            (role -> ((json \ role \ "request_attributes").get.as[List[JsValue]])) }
           catch { case _: Throwable => }
        } 
  

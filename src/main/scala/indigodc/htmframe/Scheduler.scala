@@ -108,7 +108,8 @@ class Scheduler() extends mesos.Scheduler with CondorUtils {
     //val desiredInstances = FarmDescriptor.executorInstances;
 
     for (offer <- offers.asScala) {
-
+      // val res = offer.getAttributesList()
+      // println(res)
       val tasks = mutable.Buffer[Protos.TaskInfo]()
 
       if (shuttingDown) {
@@ -118,24 +119,29 @@ class Scheduler() extends mesos.Scheduler with CondorUtils {
       else {
           // launch master
           if ( masterRunning.isEmpty &&  masterPending.isEmpty ) {
-              val masterRole: RoleBuilder = new RoleBuilder("master", offer);
-              val masterTask: Protos.TaskInfo = masterRole.taskInfo;
-              tasks += masterTask
-              logger.info(s"Creating task ${masterTask.getName}" )        
-              logger.debug(s"${masterTask}" )        
-              tasksCreated = tasksCreated + 1
-              masterPending.add(masterTask.getTaskId);
+              // check if offer fulfills requested attributes
+              if (RequestAttribute.check_attributes(FarmDescriptor.requestAttributes("master"), offer)) {
+                  val masterRole: RoleBuilder = new RoleBuilder("master", offer);
+                  val masterTask: Protos.TaskInfo = masterRole.taskInfo;
+                  tasks += masterTask
+                  logger.info(s"Creating task ${masterTask.getName}" )        
+                  logger.debug(s"${masterTask}" )        
+                  tasksCreated = tasksCreated + 1
+                  masterPending.add(masterTask.getTaskId);
+              }  
           } else if ( submitterRunning.isEmpty &&  submitterPending.isEmpty ) {
           // launch submitter
           // only if master healthy
-              if (masterHealthy) { 
-                  // println(s"MASTER IS OK!" )        
-                  val submitterRole: RoleBuilder = new RoleBuilder("submitter", offer);
-                  val submitterTask: Protos.TaskInfo = submitterRole.taskInfo;
-                  tasks += submitterTask
-                  logger.info(s"Creating task ${submitterTask}" )        
-                  tasksCreated = tasksCreated + 1
-                  submitterPending.add(submitterTask.getTaskId);
+              if (masterHealthy){
+                  if (RequestAttribute.check_attributes(FarmDescriptor.requestAttributes("submitter"), offer)) { 
+                      // println(s"MASTER IS OK!" )        
+                      val submitterRole: RoleBuilder = new RoleBuilder("submitter", offer);
+                      val submitterTask: Protos.TaskInfo = submitterRole.taskInfo;
+                      tasks += submitterTask
+                      logger.info(s"Creating task ${submitterTask}" )        
+                      tasksCreated = tasksCreated + 1
+                      submitterPending.add(submitterTask.getTaskId);
+                  }
               } 
           } else {
               // in this case we deal with executors according to condor queue
@@ -147,25 +153,24 @@ class Scheduler() extends mesos.Scheduler with CondorUtils {
                   val idle_nodes: Int = getIdleNodes
                   logger.info(s"Queued jobs: ${queued_jobs}" ) 
                   logger.info(s"Idle nodes: ${idle_nodes}" ) 
-                  // TODO: logica banale, va messa furba...
-                  // if ( queued_jobs > executorsPending.size + executorsRunning.size ) {
-                  // TODO: should not hardcode number of cycles
+
                   executorsWait +=1
                   if ( queued_jobs > 0 && executorsWait > FarmDescriptor.waitCycles) {
-                      executorsWait = 0 
-                      var new_instances = queued_jobs - executorsPending.size 
-                                                      - idle_nodes
-                      // TODO: should not hardcode max number of instances 
-                      if (new_instances > FarmDescriptor.executorsBatch)
-                          new_instances = FarmDescriptor.executorsBatch
-                      if (new_instances < 0)  new_instances = 0
-                      for( a <- 1 to new_instances ) {
-                          val executorRole: RoleBuilder = new RoleBuilder("executor", offer);
-                          val executorTask: Protos.TaskInfo = executorRole.taskInfo;
-                          tasks += executorTask
-                          logger.info(s"Creating task ${executorTask}" )        
-                          tasksCreated = tasksCreated + 1
-                          executorsPending.add(executorTask.getTaskId);
+                      if (RequestAttribute.check_attributes(FarmDescriptor.requestAttributes("executor"), offer)) { 
+                          executorsWait = 0 
+                          var new_instances = queued_jobs - executorsPending.size - idle_nodes
+                          logger.debug(s"Instantiating ${new_instances} new nodes")
+                          if (new_instances > FarmDescriptor.executorsBatch)
+                              new_instances = FarmDescriptor.executorsBatch
+                          if (new_instances < 0)  new_instances = 0
+                          for( a <- 1 to new_instances ) {
+                              val executorRole: RoleBuilder = new RoleBuilder("executor", offer);
+                              val executorTask: Protos.TaskInfo = executorRole.taskInfo;
+                              tasks += executorTask
+                              logger.info(s"Creating task ${executorTask}" )        
+                              tasksCreated = tasksCreated + 1
+                              executorsPending.add(executorTask.getTaskId);
+                          }
                       }
                   }
               }

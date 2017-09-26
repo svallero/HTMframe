@@ -14,6 +14,13 @@
       "cpus": 0.1,
       "mem": 512,
       "config": "/home/admin/HTMframe/config_master.json",
+      "request_attributes": [
+          { 
+            "name": "type",
+            "type": "TEXT",
+            "value": "frontend"
+          }
+      ],
       "health_checks": {
           "grace_period_seconds": 100,
           "interval_seconds": 30,
@@ -23,11 +30,21 @@
   "submitter": {
       "cpus": 0.1,
       "mem": 512,
-      "config": "/home/admin/HTMframe/config_submitter.json"
+      "config": "/home/admin/HTMframe/config_submitter.json",
+      "health_checks": {
+          "grace_period_seconds": 100,
+          "interval_seconds": 30,
+          "consecutive_failures": 30
+      }
   }, 
   "executor": {
       "cpus": 0.1,
       "mem": 512,
-      "config": "/home/admin/HTMframe/config_executor.json"
+      "config": "/home/admin/HTMframe/config_executor.json",
+      "health_checks": {
+          "grace_period_seconds": 100,
+          "interval_seconds": 30,
+          "consecutive_failures": 3
+      }
   } 
 }
