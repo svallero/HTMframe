@@ -64,15 +64,15 @@ object RoleBuilder {
     val net = Protos.ContainerInfo.DockerInfo.Network.USER;
     dockerInfoBuilder.setNetwork(net);
     //dockerInfoBuilder.setForcePullImage(true);
-    // dns
 
-    // dockerInfoBuilder.addAllParameters(
-    //    Seq(
-    //       dockerParameter("dns", FarmDescriptor.mesosDNS), 
-    //      // hostname should be the same as DNS name, or healthchecks won't work! 
-    //      dockerParameter("hostname", s"${role}.${FarmDescriptor.frameworkName}.${domain}")
-    //   ).asJava
-    // );
+    // additional device
+    // uses a generic parameter builder
+    // TODO: add the possibility to add generic parameters to builder
+    dockerInfoBuilder.addParameters(dockerParameter("device", FarmDescriptor.exposeDevice)); 
+    // ulimits needed for InfiniBand
+    dockerInfoBuilder.addParameters(dockerParameter("ulimit", FarmDescriptor.setUlimit)); 
+    
+    // dns
     dockerInfoBuilder.addParameters(dockerParameter("dns", FarmDescriptor.mesosDNS)); 
     // hostname should be the same as DNS name, or healthchecks won't work! 
     if (role != "executor") dockerInfoBuilder.addParameters(dockerParameter("hostname", s"${role}.${FarmDescriptor.frameworkName}.${FarmDescriptor.dnsDomain}"));

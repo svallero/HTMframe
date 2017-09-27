@@ -55,6 +55,8 @@ object HTMframe {
       |dnsDomain:                      [${FarmDescriptor.dnsDomain}]
       |sharedVolume:                   [${FarmDescriptor.sharedVolume}]
       |sharedMount:                    [${FarmDescriptor.sharedMount}]
+      |exposeDevice:                   [${FarmDescriptor.exposeDevice}]
+      |setUlimit:                      [${FarmDescriptor.setUlimit}]
       |condorConfig:                   [${FarmDescriptor.condorConfig}]
       |masterCpus:                     [${FarmDescriptor.roleCpus("master")}]
       |masterMem:                      [${FarmDescriptor.roleMem("master")}]

@@ -22,6 +22,8 @@ object FarmDescriptor {
     var dnsDomain:       String = "mesos" 
     var sharedVolume:    String = "/home/"
     var sharedMount:     String = "/home/"
+    var exposeDevice:    String = ""
+    var setUlimit:      String = ""
     var condorConfig:    String = "condor_config"
     val roleCpus:   Map[String, Double] = 
                     Map[String, Double](
@@ -104,7 +106,14 @@ object FarmDescriptor {
 
       try { sharedMount = ((json \ "shared_mount").get).as[String] }
       catch { case _: Throwable => }
- 
+
+      // INFINIBAND 
+      try { exposeDevice = ((json \ "device").get).as[String] }
+      catch { case _: Throwable => }
+      
+      try { setUlimit = ((json \ "ulimit").get).as[String] }
+      catch { case _: Throwable => }
+
       // CONDOR CONFIG
       try { condorConfig = ((json \ "condor_config").get).as[String] }
       catch { case _: Throwable => }

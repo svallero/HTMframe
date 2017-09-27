@@ -9,6 +9,8 @@
   "dns_domain": "mesos",
   "shared_volume": "/home/admin/test_homes",
   "shared_mount": "/home",
+  "device": "/dev/infiniband:/dev/infiniband",
+  "ulimits": "memlock=-1:-1"
   "condor_config": "/home/admin/condor_config/condor_limit_slots",
   "master": {
       "cpus": 0.1,
