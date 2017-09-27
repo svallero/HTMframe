@@ -11,15 +11,18 @@ class RoleBuilder(role: String, offer: Protos.Offer) {
    lazy val id = FarmDescriptor.frameworkName + "_" + role + "_" + uuid;
    // variable
    var submitted: Boolean = false;
-  
+ 
+   val dnsName: String = if (role != "executor") role else id; 
    // InfoBuilders
    lazy val containerInfoBuilder: Protos.ContainerInfo.Builder = 
                                            RoleBuilder.makeContainerBuilder(role);
    lazy val discoveryInfoBuilder: Protos.DiscoveryInfo.Builder = 
-                                           RoleBuilder.makeDiscoveryBuilder(role);
+                                           //RoleBuilder.makeDiscoveryBuilder(role);
+                                           RoleBuilder.makeDiscoveryBuilder(dnsName);
    lazy val healthCheckBuilder: Protos.HealthCheck.Builder = 
-                                           // RoleBuilder.makeHealthCheckHttpBuilder(role);
-                                           RoleBuilder.makeHealthCheckBuilder(role);
+                                            //RoleBuilder.makeHealthCheckHttpBuilder(role);
+                                           //RoleBuilder.makeHealthCheckBuilder(role);
+                                           RoleBuilder.makeHealthCheckBuilder(role, dnsName);
    lazy val commandInfoBuilder: Protos.CommandInfo.Builder = 
                                            RoleBuilder.makeCommandBuilder(command); 
 
@@ -127,10 +130,10 @@ object RoleBuilder {
       .setVisibility(Protos.DiscoveryInfo.Visibility.EXTERNAL) 
 
    
-  def makeHealthCheckBuilder(role: String): Protos.HealthCheck.Builder = { 
+  def makeHealthCheckBuilder(role: String, id: String): Protos.HealthCheck.Builder = { 
     val commandBuilder: Protos.CommandInfo.Builder = Protos.CommandInfo.newBuilder()
        .setValue(
-         s"curl -f -X GET http://${role}.${FarmDescriptor.frameworkName}.${FarmDescriptor.dnsDomain}:5000/health"
+         s"curl -f -X GET http://${id}.${FarmDescriptor.frameworkName}.${FarmDescriptor.dnsDomain}:5000/health"
        ) 
    
     // val gracePeriod = role match{

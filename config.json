@@ -2,8 +2,8 @@
   "name": "pippo",
   "mesos_endpoint" : "193.205.66.173:5050",
   "base_image": "svallero/htmframe:latest",
-  "wait_cycles": 15, 
-  "executors_batch": 10, 
+  "wait_cycles": 3, 
+  "executors_batch": 5, 
   "network_name": "dummynet",
   "mesos_dns": "192.168.0.81",
   "dns_domain": "mesos",
@@ -43,7 +43,7 @@
       "config": "/home/admin/HTMframe/config_executor.json",
       "health_checks": {
           "grace_period_seconds": 100,
-          "interval_seconds": 30,
+          "interval_seconds": 60,
           "consecutive_failures": 3
       }
   } 
