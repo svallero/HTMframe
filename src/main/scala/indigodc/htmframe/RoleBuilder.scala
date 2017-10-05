@@ -7,12 +7,13 @@ import scala.annotation.switch
 
 class RoleBuilder(role: String, offer: Protos.Offer) {
 
+
    val uuid: UUID = UUID.randomUUID();
    lazy val id = FarmDescriptor.frameworkName + "_" + role + "_" + uuid;
    // variable
    var submitted: Boolean = false;
  
-   val dnsName: String = if (role != "executor") role else id; 
+   val dnsName: String = if (!(role contains "executor")) role else id; 
    // InfoBuilders
    lazy val containerInfoBuilder: Protos.ContainerInfo.Builder = 
                                            RoleBuilder.makeContainerBuilder(role);
@@ -68,14 +69,16 @@ object RoleBuilder {
     // additional device
     // uses a generic parameter builder
     // TODO: add the possibility to add generic parameters to builder
+    if (!FarmDescriptor.exposeDevice.isEmpty)
     dockerInfoBuilder.addParameters(dockerParameter("device", FarmDescriptor.exposeDevice)); 
     // ulimits needed for InfiniBand
+    if (!FarmDescriptor.setUlimit.isEmpty)
     dockerInfoBuilder.addParameters(dockerParameter("ulimit", FarmDescriptor.setUlimit)); 
     
     // dns
     dockerInfoBuilder.addParameters(dockerParameter("dns", FarmDescriptor.mesosDNS)); 
     // hostname should be the same as DNS name, or healthchecks won't work! 
-    if (role != "executor") dockerInfoBuilder.addParameters(dockerParameter("hostname", s"${role}.${FarmDescriptor.frameworkName}.${FarmDescriptor.dnsDomain}"));
+    if (! (role contains "executor")) dockerInfoBuilder.addParameters(dockerParameter("hostname", s"${role}.${FarmDescriptor.frameworkName}.${FarmDescriptor.dnsDomain}"));
 
     // NETWORK INFO BUILDER
     // this is needed if you use docker USER network
@@ -95,6 +98,8 @@ object RoleBuilder {
     
     val volumeRoleConfigBuilder: Protos.Volume.Builder = Protos.Volume.newBuilder(); 
     volumeRoleConfigBuilder.setMode(Protos.Volume.Mode.RO );
+    // var role_tmp = role
+    // if (role == "static_executor") role_tmp = "executor"
     volumeRoleConfigBuilder.setHostPath(FarmDescriptor.roleConfig(role));
 
     volumeRoleConfigBuilder.setContainerPath("/root/config.json");

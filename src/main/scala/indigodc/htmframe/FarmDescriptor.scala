@@ -16,7 +16,9 @@ object FarmDescriptor {
     var mesosMaster:     String = "localhost:5050"
     var baseImage:       String = "nginx" 
     var waitCycles:         Int = 10 
-    var executorsBatch:     Int = 10
+    var executorsMax:       Int = 10
+    var executorsBatch:     Int = 5
+    var staticExecutors:    Int = 3
     var networkName:     String = "caliconet" 
     var mesosDNS:        String = "localhost" 
     var dnsDomain:       String = "mesos" 
@@ -27,45 +29,52 @@ object FarmDescriptor {
     var condorConfig:    String = "condor_config"
     val roleCpus:   Map[String, Double] = 
                     Map[String, Double](
-                                  "master"    -> 0.1,
-                                  "submitter" -> 0.1,
-                                  "executor"  -> 0.1 
+                                  "master"          -> 0.1,
+                                  "submitter"       -> 0.1,
+                                  "static_executor" -> 0.1,
+                                  "executor"        -> 0.1 
                                   )     
     val roleMem:    Map[String, Int] = 
                     Map[String, Int](
-                                  "master"    -> 512,
-                                  "submitter" -> 512,
-                                  "executor"  -> 512 
+                                  "master"          -> 512,
+                                  "submitter"       -> 512,
+                                  "static_executor" -> 512,
+                                  "executor"        -> 512 
                                   )     
     val roleConfig: Map[String, String] = 
                     Map[String, String](
-                                  "master"    -> "",
-                                  "submitter" -> "",
-                                  "executor"  -> "" 
+                                  "master"          -> "",
+                                  "submitter"       -> "",
+                                  "static_executor" -> "",
+                                  "executor"        -> "" 
                                   )     
     val requestAttributes:   Map[String, List[JsValue]] = 
                     Map[String, List[JsValue]](
-                                  "master"    -> List(),
-                                  "submitter" -> List(),
-                                  "executor"  -> List() 
+                                  "master"          -> List(),
+                                  "submitter"       -> List(),
+                                  "static_executor" -> List(),
+                                  "executor"        -> List() 
                                   )     
     val healthGracePeriodSeconds: Map[String, Int] = 
                     Map[String, Int](
-                                  "master"    -> 100,
-                                  "submitter" -> 100,
-                                  "executor"  -> 100 
+                                  "master"          -> 100,
+                                  "submitter"       -> 100,
+                                  "static_executor" -> 100,
+                                  "executor"        -> 100 
                                   )     
     val healthIntervalSeconds: Map[String, Int] = 
                     Map[String, Int](
-                                  "master"    -> 30,
-                                  "submitter" -> 30,
-                                  "executor"  -> 30 
+                                  "master"          -> 30, 
+                                  "submitter"       -> 30,
+                                  "static_executor" -> 30,
+                                  "executor"        -> 30 
                                   )     
     val healthConsecutiveFailures: Map[String, Int] = 
                     Map[String, Int](
-                                  "master"    -> 30,
-                                  "submitter" -> 30,
-                                  "executor"  -> 30 
+                                  "master"          -> 30,
+                                  "submitter"       -> 30,
+                                  "static_executor" -> 30,
+                                  "executor"        -> 30 
                                   )     
 
     // READ THE CONFIG FILE
@@ -87,7 +96,13 @@ object FarmDescriptor {
       try { waitCycles = ((json \ "wait_cycles").get).as[Int] }
       catch { case _: Throwable => }
 
+      try { executorsMax = ((json \ "executors_max").get).as[Int] }
+      catch { case _: Throwable => }
+
       try { executorsBatch = ((json \ "executors_batch").get).as[Int] }
+      catch { case _: Throwable => }
+
+      try { staticExecutors = ((json \ "static_executors").get).as[Int] }
       catch { case _: Throwable => }
 
       // NETWORK
@@ -119,7 +134,7 @@ object FarmDescriptor {
       catch { case _: Throwable => }
 
       // ROLES
-      val roles = Vector("master", "submitter", "executor")
+      val roles = Vector("master", "submitter", "static_executor", "executor")
 
       for (role <- roles) {
           try { roleCpus += (role -> ((json \ role \ "cpus").get).as[Double]) }

@@ -3,14 +3,14 @@
   "mesos_endpoint" : "193.205.66.173:5050",
   "base_image": "svallero/htmframe:latest",
   "wait_cycles": 3, 
-  "executors_batch": 5, 
+  "executors_max": 10, 
+  "executors_batch": 1, 
+  "static_executors": 3, 
   "network_name": "dummynet",
   "mesos_dns": "192.168.0.81",
   "dns_domain": "mesos",
   "shared_volume": "/home/admin/test_homes",
   "shared_mount": "/home",
-  "device": "/dev/infiniband:/dev/infiniband",
-  "ulimits": "memlock=-1:-1"
   "condor_config": "/home/admin/condor_config/condor_limit_slots",
   "master": {
       "cpus": 0.1,
@@ -37,6 +37,16 @@
           "grace_period_seconds": 100,
           "interval_seconds": 30,
           "consecutive_failures": 30
+      }
+  }, 
+  "static_executor": {
+      "cpus": 0.1,
+      "mem": 512,
+      "config": "/home/admin/HTMframe/config_static_executor.json",
+      "health_checks": {
+          "grace_period_seconds": 100,
+          "interval_seconds": 60,
+          "consecutive_failures": 3
       }
   }, 
   "executor": {

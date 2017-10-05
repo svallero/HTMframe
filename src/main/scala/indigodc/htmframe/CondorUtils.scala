@@ -20,6 +20,12 @@ trait CondorUtils {
     getUrl(idle_url)
   }
 
+  protected def getValue(string: String): Int = { 
+     
+    val idle_url: String = "http://submitter."+FarmDescriptor.frameworkName+".mesos:5001/"+string
+    getUrl(idle_url)
+  }
+
   protected def getUrl(url: String): Int = { 
 
      try {

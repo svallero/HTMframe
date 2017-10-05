@@ -30,6 +30,9 @@ class Scheduler() extends mesos.Scheduler with CondorUtils {
   private[this] val executorsPending = mutable.Set[Protos.TaskID]();
   private[this] val executorsIdle    = mutable.Set[Protos.TaskID]();
   private[this] var executorsWait = 0;   
+  // static executor role 
+  private[this] val staticExecutorsRunning = mutable.Set[Protos.TaskID]();
+  private[this] val staticExecutorsPending = mutable.Set[Protos.TaskID]();
   
   // general
   private[this] val pendingInstances = mutable.Set[Protos.TaskID]();
@@ -143,26 +146,50 @@ class Scheduler() extends mesos.Scheduler with CondorUtils {
                       submitterPending.add(submitterTask.getTaskId);
                   }
               } 
+          } else if ( staticExecutorsRunning.size + staticExecutorsPending.size < FarmDescriptor.staticExecutors ) {
+          // launch static executors
+          // only if submitter is  healthy
+              if (submitterHealthy){
+                  if (RequestAttribute.check_attributes(FarmDescriptor.requestAttributes("static_executor"), offer)) { 
+                      val staticExecutorRole: RoleBuilder = new RoleBuilder("static_executor", offer);
+                      val staticExecutorTask: Protos.TaskInfo = staticExecutorRole.taskInfo;
+                      tasks += staticExecutorTask
+                      logger.info(s"Creating task ${staticExecutorTask}" )        
+                      tasksCreated = tasksCreated + 1
+                      staticExecutorsPending.add(staticExecutorTask.getTaskId);
+                  }
+              } 
           } else {
               // in this case we deal with executors according to condor queue
               // check if submitter is healthy
               //  println(s"SUBMITTER_STATUS: ${submitterHealthy}" )        
               if (submitterHealthy) {
                   // how many jobs in queue
-                  val queued_jobs: Int = getQueueSize
-                  val idle_nodes: Int = getIdleNodes
+                  // val queued_jobs: Int = getQueueSize
+                  // val idle_nodes: Int = getIdleNodes
+                  val queued_jobs: Int = getValue("idle_jobs")
+                  val running_jobs: Int = getValue("running_jobs")
+                  val idle_nodes: Int = getValue("idle_nodes")
+                  val busy_nodes: Int = getValue("busy_nodes")
                   logger.info(s"Queued jobs: ${queued_jobs}" ) 
+                  logger.debug(s"Running jobs: ${running_jobs}" ) 
                   logger.info(s"Idle nodes: ${idle_nodes}" ) 
+                  logger.debug(s"Busy nodes: ${busy_nodes}" ) 
 
                   executorsWait +=1
-                  if ( queued_jobs > 0 && executorsWait > FarmDescriptor.waitCycles) {
+                  val executor_instances = executorsPending.size + executorsRunning.size
+                  if ( queued_jobs > 0 && executorsWait > FarmDescriptor.waitCycles && executor_instances <= FarmDescriptor.executorsMax) {
                       if (RequestAttribute.check_attributes(FarmDescriptor.requestAttributes("executor"), offer)) { 
                           executorsWait = 0 
                           var new_instances = queued_jobs - executorsPending.size - idle_nodes
-                          logger.debug(s"Instantiating ${new_instances} new nodes")
                           if (new_instances > FarmDescriptor.executorsBatch)
                               new_instances = FarmDescriptor.executorsBatch
+                          if (new_instances + executor_instances > FarmDescriptor.executorsMax)
+                              new_instances = FarmDescriptor.executorsMax - executor_instances 
                           if (new_instances < 0)  new_instances = 0
+
+                          logger.debug(s"Instantiating ${new_instances} new nodes")
+
                           for( a <- 1 to new_instances ) {
                               val executorRole: RoleBuilder = new RoleBuilder("executor", offer);
                               val executorTask: Protos.TaskInfo = executorRole.taskInfo;
@@ -207,6 +234,9 @@ class Scheduler() extends mesos.Scheduler with CondorUtils {
             submitterPending.remove(taskId);                           
             submitterRunning.add(taskId);
             submitterHealthy = health
+        } else if (taskId.toString contains "static_executor") {
+            staticExecutorsPending.remove(taskId);                           
+            staticExecutorsRunning.add(taskId);
         } else if (taskId.toString contains "executor") {
             executorsPending.remove(taskId);                           
             executorsRunning.add(taskId);
@@ -220,6 +250,9 @@ class Scheduler() extends mesos.Scheduler with CondorUtils {
             submitterPending.remove(taskId);                           
             submitterRunning.remove(taskId);
             submitterHealthy = false
+        } else if (taskId.toString contains "static_executor") {
+            staticExecutorsPending.remove(taskId);                           
+            staticExecutorsRunning.remove(taskId);
         } else if (taskId.toString contains "executor") {
             executorsPending.remove(taskId);                           
             executorsRunning.remove(taskId);

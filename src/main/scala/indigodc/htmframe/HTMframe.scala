@@ -49,7 +49,9 @@ object HTMframe {
       |mesosMaster:                    [${FarmDescriptor.mesosMaster}]
       |baseImage:                      [${FarmDescriptor.baseImage}]
       |waitCycles:                     [${FarmDescriptor.waitCycles}]
+      |executorsMax:                   [${FarmDescriptor.executorsMax}]
       |executorsBatch:                 [${FarmDescriptor.executorsBatch}]
+      |staticExecutors:                [${FarmDescriptor.staticExecutors}]
       |networkName:                    [${FarmDescriptor.networkName}]
       |mesosDNS:                       [${FarmDescriptor.mesosDNS}]
       |dnsDomain:                      [${FarmDescriptor.dnsDomain}]
@@ -79,6 +81,13 @@ object HTMframe {
       |executorHcGracePeriod:          [${FarmDescriptor.healthGracePeriodSeconds("executor")}]
       |executorHcInterval:             [${FarmDescriptor.healthIntervalSeconds("executor")}]
       |executorHcConsecutiveFailures:  [${FarmDescriptor.healthConsecutiveFailures("executor")}]
+      |staticExecutorCpus:                   [${FarmDescriptor.roleCpus("static_executor")}]
+      |staticExecutorMem:                    [${FarmDescriptor.roleMem("static_executor")}]
+      |staticExecutorConfig:                 [${FarmDescriptor.roleConfig("static_executor")}]
+      |staticExecutorRequestAttributes:      [${FarmDescriptor.requestAttributes("static_executor")}]
+      |staticExecutorHcGracePeriod:          [${FarmDescriptor.healthGracePeriodSeconds("static_executor")}]
+      |staticExecutorHcInterval:             [${FarmDescriptor.healthIntervalSeconds("static_executor")}]
+      |staticExecutorHcConsecutiveFailures:  [${FarmDescriptor.healthConsecutiveFailures("static_executor")}]
       |
     """.stripMargin)
 
