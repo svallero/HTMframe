@@ -9,8 +9,18 @@
   "network_name": "dummynet",
   "mesos_dns": "192.168.0.81",
   "dns_domain": "mesos",
-  "shared_volume": "/home/admin/test_homes",
-  "shared_mount": "/home",
+  "shared_volumes": [
+      {
+        "source": "/home/admin/test_homes",
+        "mount_point": "/home",
+        "permissions": "RW" 
+      },
+      {
+        "source": "/home/admin/test_data",
+        "mount_point": "/data",
+        "permissions": "RW" 
+      }
+  ],
   "condor_config": "/home/admin/condor_config/condor_limit_slots",
   "master": {
       "cpus": 0.1,

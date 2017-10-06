@@ -1,6 +1,8 @@
 package indigodc.htmframe
 
 import org.apache.mesos._
+import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 import scala.collection.JavaConverters._
 import java.util.UUID
 import scala.annotation.switch
@@ -86,10 +88,12 @@ object RoleBuilder {
                    Protos.NetworkInfo.newBuilder.setName(FarmDescriptor.networkName) 
 
     // VOLUME BUILDER
-    val volumeBuilder: Protos.Volume.Builder = Protos.Volume.newBuilder();
-    volumeBuilder.setMode(Protos.Volume.Mode.RW );
-    volumeBuilder.setHostPath(FarmDescriptor.sharedVolume);
-    volumeBuilder.setContainerPath(FarmDescriptor.sharedMount);
+    // generic volumes for roles submitter, executor and static_executor
+    val sharedVolumes = mutable.Set[Protos.Volume]();
+    for (volume <- FarmDescriptor.sharedVolumes) {
+        val vol: Protos.Volume = SharedVolume.makeVolumeBuilder(volume)
+        sharedVolumes += vol
+    }
 
     val volumeCondorConfigBuilder: Protos.Volume.Builder = Protos.Volume.newBuilder(); 
     volumeCondorConfigBuilder.setMode(Protos.Volume.Mode.RW );
@@ -112,7 +116,7 @@ object RoleBuilder {
     containerInfoBuilder.addNetworkInfos(networkInfoBuilder);
     containerInfoBuilder.addVolumes(volumeCondorConfigBuilder);
     containerInfoBuilder.addVolumes(volumeRoleConfigBuilder);
-    if (role != "master") containerInfoBuilder.addVolumes(volumeBuilder);
+    if (role != "master") containerInfoBuilder.addAllVolumes(sharedVolumes.asJava);
     containerInfoBuilder // expected return value
   }
          

@@ -22,8 +22,7 @@ object FarmDescriptor {
     var networkName:     String = "caliconet" 
     var mesosDNS:        String = "localhost" 
     var dnsDomain:       String = "mesos" 
-    var sharedVolume:    String = "/home/"
-    var sharedMount:     String = "/home/"
+    var sharedVolumes: List[JsValue] = List()
     var exposeDevice:    String = ""
     var setUlimit:      String = ""
     var condorConfig:    String = "condor_config"
@@ -115,11 +114,8 @@ object FarmDescriptor {
       try { dnsDomain = ((json \ "dns_domain").get).as[String] }
       catch { case _: Throwable => }
 
-      // SHARED VOLUME
-      try { sharedVolume = ((json \ "shared_volume").get).as[String] }
-      catch { case _: Throwable => }
-
-      try { sharedMount = ((json \ "shared_mount").get).as[String] }
+      // SHARED VOLUMES
+      try { sharedVolumes = ((json \ "shared_volumes").get).as[List[JsValue]] }
       catch { case _: Throwable => }
 
       // INFINIBAND 
@@ -161,6 +157,7 @@ object FarmDescriptor {
           try { requestAttributes += 
             (role -> ((json \ role \ "request_attributes").get.as[List[JsValue]])) }
           catch { case _: Throwable => }
+
        } 
  
     }
