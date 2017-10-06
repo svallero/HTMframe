@@ -53,6 +53,12 @@
       "cpus": 0.1,
       "mem": 512,
       "config": "/home/admin/HTMframe/config_static_executor.json",
+      "custom_parameters": [
+          {
+            "key": "ulimit",
+            "value": "memlock=-1:-1" 
+          } 
+      ],
       "health_checks": {
           "grace_period_seconds": 100,
           "interval_seconds": 60,

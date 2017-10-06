@@ -54,6 +54,14 @@ object FarmDescriptor {
                                   "static_executor" -> List(),
                                   "executor"        -> List() 
                                   )     
+    val customParameters:   Map[String, List[JsValue]] = 
+                    Map[String, List[JsValue]](
+                                  "master"          -> List(),
+                                  "submitter"       -> List(),
+                                  "static_executor" -> List(),
+                                  "executor"        -> List() 
+                                  )     
+
     val healthGracePeriodSeconds: Map[String, Int] = 
                     Map[String, Int](
                                   "master"          -> 100,
@@ -156,6 +164,10 @@ object FarmDescriptor {
 
           try { requestAttributes += 
             (role -> ((json \ role \ "request_attributes").get.as[List[JsValue]])) }
+          catch { case _: Throwable => }
+
+          try { customParameters += 
+            (role -> ((json \ role \ "custom_parameters").get.as[List[JsValue]])) }
           catch { case _: Throwable => }
 
        } 

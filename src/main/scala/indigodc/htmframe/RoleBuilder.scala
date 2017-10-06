@@ -68,19 +68,15 @@ object RoleBuilder {
     dockerInfoBuilder.setNetwork(net);
     //dockerInfoBuilder.setForcePullImage(true);
 
-    // additional device
-    // uses a generic parameter builder
-    // TODO: add the possibility to add generic parameters to builder
-    if (!FarmDescriptor.exposeDevice.isEmpty)
-    dockerInfoBuilder.addParameters(dockerParameter("device", FarmDescriptor.exposeDevice)); 
-    // ulimits needed for InfiniBand
-    if (!FarmDescriptor.setUlimit.isEmpty)
-    dockerInfoBuilder.addParameters(dockerParameter("ulimit", FarmDescriptor.setUlimit)); 
-    
+    // add generic parameters to builder
+    for (param <- FarmDescriptor.customParameters(role)){
+        dockerInfoBuilder.addParameters(CustomParameters.dockerParameter(param)); 
+    }
+
     // dns
-    dockerInfoBuilder.addParameters(dockerParameter("dns", FarmDescriptor.mesosDNS)); 
+    dockerInfoBuilder.addParameters(CustomParameters.dockerParameter("dns", FarmDescriptor.mesosDNS)); 
     // hostname should be the same as DNS name, or healthchecks won't work! 
-    if (! (role contains "executor")) dockerInfoBuilder.addParameters(dockerParameter("hostname", s"${role}.${FarmDescriptor.frameworkName}.${FarmDescriptor.dnsDomain}"));
+    if (! (role contains "executor")) dockerInfoBuilder.addParameters(CustomParameters.dockerParameter("hostname", s"${role}.${FarmDescriptor.frameworkName}.${FarmDescriptor.dnsDomain}"));
 
     // NETWORK INFO BUILDER
     // this is needed if you use docker USER network
@@ -120,12 +116,6 @@ object RoleBuilder {
     containerInfoBuilder // expected return value
   }
          
-  def dockerParameter(key: String, value: String): Protos.Parameter =
-    Protos.Parameter.newBuilder
-      .setKey(key)
-      .setValue(value)
-      .build
-
   def scalarResource(name: String, value: Double): Protos.Resource =
     Protos.Resource.newBuilder
       .setType(Protos.Value.Type.SCALAR)
