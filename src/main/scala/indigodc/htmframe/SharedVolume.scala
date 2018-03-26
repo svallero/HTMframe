@@ -25,7 +25,7 @@ class SharedVolume(json: JsValue) {
     try { permissions = Protos.Volume.Mode.valueOf(((json \ "permissions").get).as[String]) }
     catch { case _: Throwable => logger.error("Volume permissions not defined!")}
    
-    if (!(allowed_permissions.contains(permissions))) { logger.error("Permissions must be one of: RO, RW!")}
+    if (!(allowed_permissions.contains(permissions.toString))) { logger.error("Permissions must be one of: RO, RW!")}
 
 }
 

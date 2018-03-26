@@ -7,6 +7,11 @@ import com.typesafe.scalalogging._
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import akka.actor.ActorSystem
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.model._
+import akka.http.scaladsl.server.Directives._
+import akka.stream.ActorMaterializer
 
 object HTMframe {
 
@@ -100,10 +105,16 @@ object HTMframe {
     val driver: SchedulerDriver =
       new MesosSchedulerDriver(scheduler, frameworkInfo, FarmDescriptor.mesosMaster)
 
+    // Start the Akka server
+    val webServer = new HttpServer(scheduler);
+
+    webServer.start
+
     // driver.run blocks; therefore run in a separate thread
     // SV: in real life we want to run this in a container, 
     // so blocking will be ok. 
     Future { driver.run }
+
 
     // wait for the enter key
     val NEWLINE = '\n'.toInt
@@ -112,6 +123,11 @@ object HTMframe {
     }
 
     // graceful shutdown
+
+    // Akka server
+    webServer.stop
+
+    // Scheduler
     scheduler.shutdown(5.minutes) { driver.stop() }
     sys.exit(0)
   }

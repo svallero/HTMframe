@@ -20,19 +20,21 @@ class Scheduler() extends mesos.Scheduler with CondorUtils {
   // master role
   private[this] val masterRunning = mutable.Set[Protos.TaskID]();
   private[this] val masterPending = mutable.Set[Protos.TaskID]();
-  private[this] var masterHealthy = false;
+  /*private[this]*/ var masterHealthy = false;
   // submitter role
   private[this] val submitterRunning = mutable.Set[Protos.TaskID]();
   private[this] val submitterPending = mutable.Set[Protos.TaskID]();
-  private[this] var submitterHealthy = false;
+  /*private[this]*/ var submitterHealthy = false;
   // executor role 
   private[this] val executorsRunning = mutable.Set[Protos.TaskID]();
   private[this] val executorsPending = mutable.Set[Protos.TaskID]();
+  val executorsHealthy = mutable.Set[Protos.TaskID]();
   private[this] val executorsIdle    = mutable.Set[Protos.TaskID]();
   private[this] var executorsWait = 0;   
   // static executor role 
   private[this] val staticExecutorsRunning = mutable.Set[Protos.TaskID]();
   private[this] val staticExecutorsPending = mutable.Set[Protos.TaskID]();
+  val staticExecutorsHealthy = mutable.Set[Protos.TaskID]();
   
   // general
   private[this] val pendingInstances = mutable.Set[Protos.TaskID]();
@@ -237,9 +239,13 @@ class Scheduler() extends mesos.Scheduler with CondorUtils {
         } else if (taskId.toString contains "static_executor") {
             staticExecutorsPending.remove(taskId);                           
             staticExecutorsRunning.add(taskId);
+            if (health) staticExecutorsHealthy.add(taskId);
+            else staticExecutorsHealthy.remove(taskId);
         } else if (taskId.toString contains "executor") {
             executorsPending.remove(taskId);                           
             executorsRunning.add(taskId);
+            if (health) executorsHealthy.add(taskId);
+            else executorsHealthy.remove(taskId);
         }
     } else if (state == Protos.TaskState.TASK_FINISHED || state == Protos.TaskState.TASK_FAILED || state == Protos.TaskState.TASK_KILLED) {
         if (taskId.toString contains "master") {
@@ -253,9 +259,11 @@ class Scheduler() extends mesos.Scheduler with CondorUtils {
         } else if (taskId.toString contains "static_executor") {
             staticExecutorsPending.remove(taskId);                           
             staticExecutorsRunning.remove(taskId);
+            staticExecutorsHealthy.remove(taskId);
         } else if (taskId.toString contains "executor") {
             executorsPending.remove(taskId);                           
             executorsRunning.remove(taskId);
+            executorsHealthy.remove(taskId);
         }
     }
   }
